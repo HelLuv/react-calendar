@@ -1,28 +1,56 @@
-import React, { FC } from 'react'
+import React, { FC, useState } from 'react'
 import { DatePicker, Form, Input, Button, Row, Select } from 'antd';
 import { rules } from '../utils/rules';
-import { Option } from 'antd/lib/mentions';
+import { IUser } from '../models/IUser';
+import { IEvent } from '../models/IEvent';
+import { Moment } from 'moment';
+import { formatDate } from '../utils/date';
+import { useTypedSelector } from '../hooks/useTypedSelector';
 
-export const EventForm: FC = () => {
+
+interface EventFormProps {
+	guests: IUser[],
+	submit: (event: IEvent) => void
+}
+
+export const EventForm: FC<EventFormProps> = (props) => {
+	const [event, setEvent] = useState<IEvent>({
+		author: '',
+		date: '',
+		description: '',
+		guest: ''
+	} as IEvent);
+	const { user } = useTypedSelector(state => state.auth);
+
+	const SelectDate = (date: Moment | null) => {
+		if (date) {
+			setEvent({ ...event, date: formatDate(date?.toDate()) })
+		}
+	};
+
+	const submitForm = () => {
+		props.submit({ ...event, author: user.username })
+	}
+
 	return (
-		<Form>
+		<Form onFinish={submitForm}>
 			<Form.Item
 				label="Event's description"
 				name="description"
 				rules={[rules.required("Please input event's description")]}
 			>
-				<Input />
+				<Input onChange={(e) => setEvent({ ...event, description: e.target.value })} value={event.description} />
 			</Form.Item>
 			<Form.Item
 				label="Event's date"
 				name="date"
 				rules={[rules.required("Please input event's date")]}
 			>
-				<DatePicker />
+				<DatePicker onChange={(date) => SelectDate(date)} />
 			</Form.Item>
 			<Form.Item
 				label="Event's guest"
-				name="date"
+				name="guest"
 				rules={[rules.required("Please input event's date")]}
 			>
 				<Select
@@ -30,11 +58,12 @@ export const EventForm: FC = () => {
 					showSearch
 					allowClear
 					style={{ width: '100%' }}
-					placeholder="Please select"
+					placeholder="Please select guests"
+					onChange={(guest: string) => setEvent({ ...event, guest })}
 				>
-					<Option value="jack">Jack</Option>
-					<Option value="lucy">Lucy</Option>
-					<Option value="tom">Tom</Option>
+					{props.guests.map(guest =>
+						<Select.Option key={guest.username} value={guest.username}>{guest.username}</Select.Option>
+					)}
 				</Select>
 			</Form.Item>
 			<Row justify="end">
